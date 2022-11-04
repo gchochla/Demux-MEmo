@@ -1,10 +1,13 @@
-# Demux & MEmo
+# Emotion Recognition using Emotion Embeddings, MLM, and emotion correlations
 
-## Emotion Recognition
+This repo contains code and execution scripts for [Leveraging Label Correlations in a Multi-label Setting: A Case Study in Emotion](https://arxiv.org/abs/2210.15842), and [Using Emotion Embeddings to Transfer Knowledge Between Emotions, Languages, and Annotation Formats](https://arxiv.org/abs/2211.00171).
 
-This repo contains code for `Demux` and `MEmo` (links to papers coming soon), emotion recognition models using two different types of language prompt. We study how we can leverage relationships between emotions. We do so at two levels, using word associations and with additional losses.
+## Leveraging Label Correlations in a Multi-label Setting: A Case Study in Emotion
 
-## `Demux`
+This repo contains code for `Demux` and `MEmo`, emotion recognition models using two different types of language prompts. We study how we can leverage relationships between emotions. We do so at two levels, using word associations and with additional losses.
+
+### `Demux`
+---
 
 Heavily inspired from [SpanEmo](https://github.com/gchochla/SpanEmo), `Demux` includes the names of the categories (here, emotions) in the input as its first input sequence, and the actual input as the second sequence. The contextual embeddings for each emotion are used to get a probability for each.
 
@@ -14,23 +17,36 @@ The contextual embeddings of the emotion words are eseentially label embeddings,
 
 `Demux` takes advantage of word-level associations in the input to transfer knowledge betwwen emotions. Our experiments show that emotion recognition can be transferred in a zero-shot manner to new emotions, and that associations between emotions words already capture the relationships between emotions to a large extend. 
 
-### Why `Demux` (short for 'Demultiplexer')?
+#### Why `Demux` (short for 'Demultiplexer')?
 
 ![](./media/demultiplexer.png)
 
 We can consider the emotions classes as *selecting* the features that the Transformer is going to output from the output.
 
-## `MEmo`
+### `MEmo`
+
+---
 
 `MEmo` uses a declarative prompt about the emotional content of the input text, but the actual emotions have been replaced by a `[MASK]` token. We either build a classifier on top of the contextual embeddings of the `[MASK]` token, or use the pretrained MLM head and grab the logits of the emotion tokens.
 
 ![](./media/memo.png)
 
-## Regularization
+### Regularization
+
+---
 
 ![](./media/correlations.png)
 
-{We induce label-correlation awareness by pulling together or pushing apart representations of pairs of emotions. This can be achieved at the level of intermediate representations $h$, and at the level of predictions $\hat{y}$. Prediction pairs can be regularized using the labels $y$, by pulling emotions with the same gold labels together, otherwise pushing them apart. Representation pairs can be regularized in the same way, but we can also use prior relationships between them, which can conflict current labels. Each pair's regularization term can be modulated by the strength of the relationship of the pair.
+We induce label-correlation awareness by pulling together or pushing apart representations of pairs of emotions. This can be achieved at the level of intermediate representations $h$, and at the level of predictions $\hat{y}$. Prediction pairs can be regularized using the labels $y$, by pulling emotions with the same gold labels together, otherwise pushing them apart. Representation pairs can be regularized in the same way, but we can also use prior relationships between them, which can conflict current labels. Each pair's regularization term can be modulated by the strength of the relationship of the pair.
+
+## Using Emotion Embeddings to Transfer Knowledge Between Emotions, Languages, and Annotation Formats
+
+We extend `Demux` to work with clusters of emotions. We achieve this by performing operations on the emotion embeddings produced by regular `Demux`.
+
+![](./media/demux-cluster.png)
+
+Moreover, since emotions are specified in the input, we can dynamically add and remove emotions from our predictions. We show that `Demux` can achieve zero-shot tranfer to new emotions and annotation formats, like clusters of emotions. We lso show that the zero-shot transfer is successful even with a change in language.
+
 
 ## Installation
 
@@ -48,9 +64,23 @@ pip install -e .[dev]
 
 (Note to zsh users: escape `[` and `]`)
 
+## Extend to other datasets and tasks
+
+Our trainers are general-purpose enough to allow use with different datasets, tasks, models, etc. All you need is:
+
+* Dataset: implement `__getitem__` to return a dictionary of values and the labels. The keys should ideally match the ones from HuggingFace `transformer` models. If inheriting from some subclass of `emorec.emorec_utils.dataset.EmotionDataset` class, you only have to implement the `load_dataset` and `encode_plus` method. The former should return a list of strings and a tensor of labels. `encode_plus` is the method that tokenizes the input. We use (pseudo) Mixins to implement it, as it is mostly constant across datasets for a specific model. Note that the category names, which are necessary for `Demux`, fall under `emotions`, `english_emotions`, `all_emotions`, etc., so it may be cumbersome when trasfering to a different task, hence consider defining your classes anew. Demux also requires `class_inds`, a list of either tensors or lists of tensors, which specify which tokens to grab per input. List of lists of tensors should be used for clusters.
+
+* Trainer:  the trainer also assumes emotion datasets, so it uses `dataset.emotions` (as discussed above), etc. However, in terms of the actual training, it should be extensible to other tasks. The main trainer, `emorec.emorec_utils.trainer.SemEval2018Task1EcTrainer`, includes all regularization losses, and other utilities presented in the papers. For base methods, look at `emorec.trainer.BaseTrainer`.
+
+* Model: any nn.Module. The trainer contains utilities to grab specific outputs of the model. `Demux` and `MEmo` have two outputs by default, the logits and intermediate representations (`None`s when no intermediate representations exist). Look at our models in `emorec/models/` to see how to implement `from_pretrained` so you can load any pretrained LM into your frameworks.
+
+* Command-line arguments in the scripts: All the arguments one wants to access when configuring each run should be placed inside the class variable `argparse_args` of the appropriate class in the format that can be seen for example in `emorec.trainer.BaseTrainer`. Moreover, they probably need to be added in `emorec.train_utils.MyTrainingArgument` similarly to the other arguments there. Then, under the experiments folder, each new script should grab these to create an `ArgumentParser` (like we have done).
+
+* Logging system: see below.
+
 ## Usage
 
-We provide the scripts which execute all the experiments to replicate the results of the paper, when possible. To compare between different local and global losses, run correlation experiments script:
+We provide the scripts which execute all the experiments to replicate the results of the paper, when possible. To compare between different local and global losses, run the [correlation](#leveraging-label-correlations-in-a-multi-label-setting-a-case-study-in-emotion) scripts:
 
 ```bash
 chmod +x scripts/correlation-experiments-semeval.sh
@@ -59,13 +89,11 @@ scripts/correlation-experiments-semeval.sh -c 0 -r 10 -d /path/to/semeval/root #
 
 and `scripts/correlation-experiments-semeval-test.sh` for the test results.
 
-To run the multilingual, zero-shot, and cluster experiments, follow the same recipe for the rest of the of the bash scripts in `./scripts`, except for `french-elections.sh`, which requires the french election data (and the extra argument `-f /path/to/french/data`). We nonetheless provide the scripts and the necessary classes to aid researcher who want to repurpose the model for their needs: `./emorec/emorec_utils/dataset/FrenchElectionEmotionClusterDataset`, `./emorec/emorec_utils/trainer/FrenchElectionTrainer`, and similarly for `./emorec/models/demux` and `./emorec/models/memo`.
+To run the [knowledge transfer experiments](#using-emotion-embeddings-to-transfer-knowledge-between-emotions-languages-and-annotation-formats), follow the same recipe for the rest of the of the bash scripts in `./scripts`, except for `french-elections.sh`, which requires the french election data (and the extra arguments `-f /path/to/french/data` and `-e /path/to/experiment/logs`). We nonetheless provide the scripts and the necessary classes to aid researcher who want to repurpose the model for their needs: `emorec.emorec_utils.dataset.FrenchElectionEmotionClusterDataset`, `emorec.emorec_utils.trainer.FrenchElectionTrainer`, and similarly for `emorec.models.demux` and `emorec.models.memo`.
 
 The project's structure follows the `transformers` library. Things to keep in mind when extending the scripts:
 
-All the arguments on wants to access when configuring each run should be placed inside the class variable `argparse_args` of the appropriate class in the format that can be seen for example in `./emorec/trainer/BaseTrainer`. Moreover, they probably need to be added in `./emorec/train_utils/MyTrainingArgument` similarly to the other arguments there.
-
-We have implemented our own logging system to keep an orderly track of experiments, which we hope to extend in the future to its own module. It can be found in `./emorec/logging_utils.py`. What you probably need to know is that it produces the folder `experiment_logs`, followed by a specific folder for the model+dataset (so different subfolder for `Demux` v. `MEmo`, different subfolder for `SemEval` v. `GoEmotions`). In that subfolder, different experiment subfolders per configuration are created. The name of each specific experiment subfolder contains some important information like which models were used, which splits, etc. The final integer is used to differentiate runs with different hyperparameters if they do not appear in the main name (the same experiment ran twice will log additional experiments in the same subfolder). AN example can be seen below:
+We have implemented our own logging system to keep an orderly track of experiments, which we hope to extend in the future to its own module. It can be found in `emorec.logging_utils`. What you probably need to know is that it produces the folder `experiment_logs`, followed by a specific folder for the model+dataset (so different subfolder for `Demux` v. `MEmo`, different subfolder for `SemEval` v. `GoEmotions`). In that subfolder, different experiment subfolders per configuration are created. The name of each specific experiment subfolder contains some important information like which models were used, which splits, etc. The final integer is used to differentiate runs with different hyperparameters if they do not appear in the main name (the same experiment ran twice will log additional experiments in the same subfolder). AN example can be seen below:
 
 ```
 experiment_logs/
@@ -140,7 +168,7 @@ English(train),English(dev),None,twitter-xlm-roberta-base-sentiment,1.0,None,cos
     └── train_loss.png
 ```
 
-`aggregated_metrics.yml` contains the mean and the standard deviation of all logged metrics across multiple runs for the epoch designated as the final one (e.g. simple training will use the last epoch, early stopping will use the corresponding step, see example below), `metrics.yml` contains all the logged metrics, `params.yml` contains the hyperparameter configuration, `plots` contains plots of the metrics that are logged across all training (not final metrics, e.g. those of the test set), and `obj.pkl` contains the logger object, which you can re-load by using the load_existent method of vault.logging_utils.ExperimentHandler. An example of aggregated metrics could be:
+`aggregated_metrics.yml` contains the mean and the standard deviation of all logged metrics across multiple runs for the epoch designated as the final one (e.g. simple training will use the last epoch, early stopping will use the corresponding step, see example below), `metrics.yml` contains all the logged metrics, `params.yml` contains the hyperparameter configuration, `plots` contains plots of the metrics that are logged across all training (not final metrics, e.g. those of the test set), and `obj.pkl` contains the logger object, which you can re-load by using the load_existent method of vault.logging_utils.ExperimentHandler. Here, you will also find your saved models. An example of aggregated metrics could be:
 
 ```
 ? ''
@@ -152,4 +180,4 @@ English(train),English(dev),None,twitter-xlm-roberta-base-sentiment,1.0,None,cos
 
 The name of the subfolder is dictated by the user by using `./emorec/logging_utils/ExperimentHandler.name_params(list_of_param_names)`, like we do in our `experiments` scripts.
 Note that for consistency the names are sorted, so you have to look out for which value means what in the folder subname (use underscores to push names to the strat of the subfolder).
-If you want to introduce new hyperparameters, then, given that the name of the experiment subfolders don't change, if the new hyperparameters are `False` or `None` when they are not used (in other words the experiment is the same as before), the handler will indeed consider them inactive and the experiment equivalent with a previous ones. 
+If you want to introduce new hyperparameters, then, given that the name of the experiment subfolders don't change, if the new hyperparameters are `False` or `None` when they are not used (in other words the experiment is the same as before), the handler will indeed consider them inactive and the experiment equivalent with a previous ones.

@@ -39,6 +39,27 @@ We can consider the emotions classes as *selecting* the features that the Transf
 
 We induce label-correlation awareness by pulling together or pushing apart representations of pairs of emotions. This can be achieved at the level of intermediate representations $h$, and at the level of predictions $\hat{y}$. Prediction pairs can be regularized using the labels $y$, by pulling emotions with the same gold labels together, otherwise pushing them apart. Representation pairs can be regularized in the same way, but we can also use prior relationships between them, which can conflict current labels. Each pair's regularization term can be modulated by the strength of the relationship of the pair.
 
+### Extra Results from Demux and MEmo
+
+Individual F1 scores for each emotion in each language in the test sets for SemEval 2018 Task 1 E-c, for the Demux setting "intra ρ e^y":
+
+ | Emotion      | English       | Spanish       | Arabic        |
+|--------------|---------------|---------------|---------------|
+| anger        | 79.4 &pm; 0.3 | 74.9 &pm; 0.7 | 78.8 &pm; 0.4 |
+| anticipation | 29.5 &pm; 1.7 | 43.7 &pm; 3.6 | 14.7 &pm; 2.6 |
+| disgust      | 75.8 &pm; 0.5 | 47.3 &pm; 1.0 | 55.6 &pm; 1.7 |
+| fear         | 75.1 &pm; 0.6 | 69.2 &pm; 0.7 | 73.5 &pm; 0.8 |
+| joy          | 87.1 &pm; 0.3 | 81.8 &pm; 0.7 | 81.7 &pm; 0.7 |
+| love         | 63.4 &pm; 0.5 | 68.0 &pm; 0.8 | 75.2 &pm; 0.8 |
+| optimism     | 75.4 &pm; 0.6 | 39.4 &pm; 1.0 | 74.4 &pm; 1.1 |
+| pessimism    | 39.3 &pm; 1.9 | 43.8 &pm; 0.9 | 38.7 &pm; 2.9 |
+| sadness      | 73.5 &pm; 0.2 | 67.2 &pm; 0.7 | 72.4 &pm; 0.6 |
+| surprise     | 23.3 &pm; 1.3 | 29.8 &pm; 1.2 | 0.0 &pm; 0.0  |
+| trust        | 11.5 &pm; 1.0 | 31.3 &pm; 1.6 | 27.2 &pm; 3.8 |
+
+The same patterns are observed for MEmo as well. The support for each emotion can be seen in the original dataset paper.
+
+
 ## Using Emotion Embeddings to Transfer Knowledge Between Emotions, Languages, and Annotation Formats
 
 We extend `Demux` to work with clusters of emotions. We achieve this by performing operations on the emotion embeddings produced by regular `Demux`.

@@ -43,7 +43,7 @@ We induce label-correlation awareness by pulling together or pushing apart repre
 
 Individual F1 scores for each emotion in each language in the test sets for SemEval 2018 Task 1 E-c, for the Demux setting "intra ρ e^y":
 
- | Emotion      | English       | Spanish       | Arabic        |
+| Emotion      | English       | Spanish       | Arabic        |
 |--------------|---------------|---------------|---------------|
 | anger        | 79.4 &pm; 0.3 | 74.9 &pm; 0.7 | 78.8 &pm; 0.4 |
 | anticipation | 29.5 &pm; 1.7 | 43.7 &pm; 3.6 | 14.7 &pm; 2.6 |
@@ -59,6 +59,18 @@ Individual F1 scores for each emotion in each language in the test sets for SemE
 
 The same patterns are observed for MEmo as well. The support for each emotion can be seen in the original dataset paper.
 
+We also present our results for GoEmotions (3 runs on test set), derived from Reddit and with 27 emotions (so more granular choice of emotions, resulting in only a very small subset of it having more than 1 emotion -- in particular 13%, causing our intra-class regularization to very rarely push predictions upwards). Note that we use the make surface-level changes to the preprocessor used for tweets to preprocess the text from Reddit:
+
+| Model             | Macro F1      | Micro F1      |
+|-------------------|---------------|---------------|
+| Demux             | 49.2 &pm; 0.5 | 54.1 &pm; 0.1 |
+| Demux intra 1 e^y | 52.3 &pm; 0.6 | 58.1 &pm; 0.6 |
+| Demux intra ρ e^y | 52.1 &pm; 0.6 | 58.2 &pm; 0.6 |
+| MEmo intra 1 e^y  | 44.0 &pm; 0.9 | 56.3 &pm; 0.1 |
+
+We see a large increase in performance from the inclusion of the local regularization terms.
+
+<small>(PS: Note GoEmotions results are preliminary)</small>
 
 ## Using Emotion Embeddings to Transfer Knowledge Between Emotions, Languages, and Annotation Formats
 

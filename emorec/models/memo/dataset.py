@@ -1,3 +1,5 @@
+## Author: Gireesh Mahajan
+
 from typing import List, Optional, Dict, Any, Callable, Union
 from transformers import PreTrainedTokenizerBase
 

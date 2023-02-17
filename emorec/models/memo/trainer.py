@@ -1,3 +1,5 @@
+## Author: Gireesh Mahajan
+
 from typing import Iterable, Any, Optional, List
 from copy import deepcopy
 

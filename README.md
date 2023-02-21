@@ -1,6 +1,6 @@
 # Emotion Recognition using Emotion Embeddings, MLM, and emotion correlations
 
-This repo contains code and execution scripts for [Leveraging Label Correlations in a Multi-label Setting: A Case Study in Emotion](https://arxiv.org/abs/2210.15842), and [Using Emotion Embeddings to Transfer Knowledge Between Emotions, Languages, and Annotation Formats](https://arxiv.org/abs/2211.00171).
+This repo contains code and execution scripts for ICASSP '23 papers [Leveraging Label Correlations in a Multi-label Setting: A Case Study in Emotion](https://arxiv.org/abs/2210.15842) and [Using Emotion Embeddings to Transfer Knowledge Between Emotions, Languages, and Annotation Formats](https://arxiv.org/abs/2211.00171).
 
 ## Leveraging Label Correlations in a Multi-label Setting: A Case Study in Emotion
 

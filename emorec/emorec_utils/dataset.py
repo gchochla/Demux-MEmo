@@ -1,10 +1,9 @@
 import logging
 import os
-import random
 import json
+import random
 from typing import List, Tuple, Optional, Union, Dict, Any, Callable
 from abc import ABC, abstractmethod
-from collections import defaultdict, Counter
 from copy import deepcopy
 
 import torch
@@ -395,7 +394,6 @@ class SemEval2018Task1EcDataset(EmotionDataset, ABC):
         ]
 
         for lang_filenames, lang in zip(filenames, self.language):
-
             df = pd.concat([pd.read_csv(fn, sep="\t") for fn in lang_filenames])
 
             # get order of labels in the files
@@ -585,7 +583,6 @@ class SemEval2018Task1EcMixDataset(SemEval2018Task1EcDataset, IterableDataset):
         ]
 
         for lang_filenames in filenames:
-
             df = pd.concat([pd.read_csv(fn, sep="\t") for fn in lang_filenames])
 
             # get order of labels in the files
@@ -983,3 +980,195 @@ class FrenchElectionEmotionClusterDataset(EmotionDataset, ABC):
     def text_preprocessor(self, text: str) -> str:
         """Twitter-specific preprocessor."""
         return self.twitter_preprocessor(self.demojizer(text))
+
+
+class PaletzDataset(EmotionDataset, ABC):
+    """Dataset with Paletz's data from Lithuanian and Polish Facebook posts.
+
+    Posts were scraped and saved into `posts.json` file, which is simply indexed by
+    post id and contains the post metadata as-is from facebook_scraper.get_posts.
+    """
+
+    argparse_args = deepcopy(EmotionDataset.argparse_args)
+    argparse_args.update(
+        dict(
+            language=dict(
+                type=str,
+                nargs="+",
+                help="language of dataset",
+                metadata=dict(
+                    name=True,
+                    name_transform=(
+                        lambda x: x if isinstance(x, str) else "+".join(x)
+                    ),
+                    name_priority=1,
+                ),
+            ),
+            model_language=dict(
+                type=str,
+                help="model's language",
+            ),
+            round_labels=dict(
+                action="store_true",
+                help="whether to round labels to 0 or 1",
+                metadata=dict(name=True),
+            ),
+        )
+    )
+
+    all_emotions = [
+        "anger",
+        "hate",
+        "contempt",
+        "disgust",
+        "embarrassment",
+        "love",
+        "admiration",
+        "attraction",
+        "cuteness",
+        "wonder",
+        "pride",
+        "sadness",
+        "nostalgia",
+        "empathy",
+        "gratitude",
+        "envy",
+        "fear",
+        "relief",
+        "confusion",
+        "surprise",
+        "happiness",
+        "excitement",
+        "amusement",
+    ]
+    all_emotions_short = [
+        "anger",
+        "hate",
+        "contempt",
+        "disgust",
+        "embar",
+        "love",
+        "admir",
+        "sexy",
+        "cute",
+        "wonder",
+        "pride",
+        "sad",
+        "nostal",
+        "empat",
+        "gratitud",
+        "envy",
+        "fear",
+        "relief",
+        "confus",
+        "surpr",
+        "happy",
+        "excite",
+        "amuse",
+    ]
+
+    @property
+    def emotions(self) -> List[str]:
+        emos = [
+            emo
+            for emo in self.all_emotions
+            if emo not in self.excluded_emotions
+        ]
+        return emos
+
+    @property
+    def emotions_short(self) -> List[str]:
+        emos = [
+            emo_s
+            for emo_s, emo in zip(self.all_emotions_short, self.all_emotions)
+            if emo not in self.excluded_emotions
+        ]
+        return emos
+
+    def __init__(
+        self,
+        language,
+        model_language,
+        round_labels,
+        _dev_ratio=0.1,
+        _test_ratio=0.15,
+        facebook_preprocessor=None,
+        demojizer=None,
+        **kwargs,
+    ):
+        self.language = language if isinstance(language, list) else [language]
+        self.model_language = (model_language or "multilingual").lower()
+        self.round_labels = round_labels
+        self._dev_ratio = _dev_ratio
+        self._test_ratio = _test_ratio
+        self.facebook_preprocessor = facebook_preprocessor or (lambda x: x)
+        self.demojizer = demojizer or (lambda x: x)
+        super().__init__(**kwargs)
+
+    def load_dataset(self) -> Tuple[List[Any], List[str], torch.Tensor]:
+        label_fns = {
+            k: os.path.join(self.root_dir, bn)
+            for k, bn in zip(
+                ["lithuanian", "polish"],
+                ["LT_FB_all_data_master.txt", "PL_FB_all_data_master.txt"],
+            )
+        }
+        text_fn = os.path.join(self.root_dir, "posts.json")
+
+        with open(text_fn, "r") as fp:
+            texts_json = json.load(fp)
+
+        df = pd.concat(
+            [
+                pd.read_csv(fn, sep="\t")
+                for k, fn in label_fns.items()
+                if k in self.language
+            ]
+        )
+        df["id"] = df["URL"].apply(lambda x: x.split("/")[-1])
+        df = df[["id"] + [emo.title() + "Cons" for emo in self.emotions_short]]
+        df["text"] = df["id"].apply(
+            lambda x: texts_json.get(x, {}).get("text", None)
+        )
+        df = df.dropna()
+
+        ids = df["id"].values.tolist()
+        texts = df["text"].values.tolist()
+        labels = (
+            torch.from_numpy(
+                df[[emo.title() + "Cons" for emo in self.emotions_short]].values
+            )
+            / 100
+        )
+        if self.round_labels:
+            labels = labels.round()
+
+        # SPLITS
+        _dev_size = max(1, int(self._dev_ratio * len(texts)))
+        _test_size = max(1, int(self._test_ratio * len(texts)))
+        random.seed(42)
+        eval_splits_inds = random.sample(
+            range(len(texts)), _dev_size + _test_size
+        )
+        train_split_inds = list(
+            set(range(len(texts))).difference(eval_splits_inds)
+        )
+        dev_split_inds = eval_splits_inds[:_dev_size]
+        test_split_inds = eval_splits_inds[_dev_size:]
+
+        split_inds = (
+            (train_split_inds if "train" in self.splits else [])
+            + (dev_split_inds if "dev" in self.splits else [])
+            + (test_split_inds if "test" in self.splits else [])
+        )
+
+        texts = [texts[i] for i in split_inds]
+        labels = labels[split_inds]
+        ids = [ids[i] for i in split_inds]
+        # end SPLITS
+
+        return texts, labels
+
+    def text_preprocessor(self, text: str) -> str:
+        """Facebook-specific preprocessor."""
+        return self.facebook_preprocessor(self.demojizer(text))

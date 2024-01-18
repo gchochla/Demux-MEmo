@@ -9,6 +9,7 @@ from emorec.emorec_utils.dataset import (
     SemEval2018Task1EcMixDataset,
     GoEmotionsDataset,
     FrenchElectionEmotionClusterDataset,
+    PaletzDataset,
 )
 from emorec.utils import flatten_list
 
@@ -253,7 +254,6 @@ class DemuxDatasetForSemEval(DemuxDatasetMixin, SemEval2018Task1EcDataset):
 class DemuxMixDatasetForSemEval(
     DemuxDatasetMixin, SemEval2018Task1EcMixDataset
 ):
-
     or_per_language = {
         "english": "or",
         "french": "ou",
@@ -279,7 +279,6 @@ class DemuxMixDatasetForSemEval(
         twitter_preprocessor: Optional[Callable] = None,
         demojizer: Optional[Callable] = None,
     ):
-
         self.language = language
         if not isinstance(language, list):
             self.language = [language]
@@ -338,7 +337,6 @@ class DemuxDatasetForGoEmotions(DemuxDatasetMixin, GoEmotionsDataset):
         demojizer: Optional[Callable] = None,
         logging_level: Optional[int] = None,
     ):
-
         self.set_emotion_order(emotions_filename)
 
         super().__init__(
@@ -395,4 +393,43 @@ class DemuxDatasetForFrenchElectionEmotionClusters(
             # to pass these to FrenchElectionEmotionClusterDataset, else None
             twitter_preprocessor=twitter_preprocessor,
             demojizer=demojizer,
+        )
+
+
+class DemuxDatasetForPaletz(DemuxDatasetMixin, PaletzDataset):
+    """Demux dataset for Paletz. For everything, check either
+    `DemuxDatasetMixin` or `PaletzDataset`."""
+
+    argparse_args = deepcopy(PaletzDataset.argparse_args)
+    argparse_args.update(DemuxDatasetMixin.argparse_args)
+
+    def __init__(
+        self,
+        root_dir: str,
+        splits: Union[List[str], str],
+        tokenizer: PreTrainedTokenizerBase,
+        max_length: int,
+        language: str,
+        round_labels: bool = True,
+        model_language: Optional[str] = None,
+        excluded_emotions: Optional[List[str]] = None,
+        logging_level: Optional[int] = None,
+        prompt_delimiter: str = " ",
+        facebook_preprocessor: Optional[Callable] = None,
+        demojizer: Optional[Callable] = None,
+    ):
+        self.excluded_emotions = excluded_emotions or []
+        super().__init__(
+            root_dir=root_dir,
+            splits=splits,
+            tokenizer=tokenizer,
+            encode_kwargs={"max_length": max_length},
+            logging_level=logging_level,
+            prompt_delimiter=prompt_delimiter,
+            excluded_emotions=excluded_emotions,
+            language=language,
+            model_language=model_language,
+            facebook_preprocessor=facebook_preprocessor,
+            demojizer=demojizer,
+            round_labels=round_labels,
         )

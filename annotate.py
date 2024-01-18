@@ -185,7 +185,9 @@ def format_output(
                 id_column: _id,
                 text_column: text["text"],
                 "providerName": "ta1-usc-isi",
-                "emotions": {emo: score for emo, score in scores[_id].items()},
+                "emotions": {
+                    emo: round(score, 4) for emo, score in scores[_id].items()
+                },
             }
         )
 

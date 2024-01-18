@@ -450,7 +450,7 @@ def main():
         if isinstance(emotion_config[emotion], str):
             emotion_config[emotion] = [emotion_config[emotion]]
 
-    annotations = {}
+    annotations = []
     for fn in args.input_filename:
         print(f"Reading {fn}...", end=" ")
         with open(fn) as fp:
@@ -488,17 +488,17 @@ def main():
                     batch_size=args.batch_size,
                     max_length=args.max_length,
                 )
-                annotations.update(
-                    to_dict(
-                        annotate(
-                            pipeline,
-                            data,
-                            device,
-                            args.id_column,
-                            args.text_column,
-                        )
+
+                new_annotations = to_dict(
+                    annotate(
+                        pipeline,
+                        data,
+                        device,
+                        args.id_column,
+                        args.text_column,
                     )
                 )
+                annotations.extend(new_annotations)
                 print(f"Annotation time: {time()-t0:.3f} sec")
 
             else:

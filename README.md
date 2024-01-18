@@ -24,7 +24,7 @@ Finally, to get the *predictions*, run the `annotate.py` script:
 
 ```bash
 python annotate.py --pretrained-folder /path/to/pretrained/model/folder \
---emotion-config ./emotions_config/your-pick.json --domain twitter \
+--emotion-config ./emotion_configs/your-pick.json --domain twitter \
 --input-filename /path/to/your/input --out ./emotion-annotations.jsonl \
 --device cuda:0 --text-column text --id-column id
 ```

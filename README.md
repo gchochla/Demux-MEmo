@@ -23,7 +23,10 @@ These folders contain the model parameters, brief model configuration files, and
 Finally, to get the *predictions*, run the `annotate.py` script:
 
 ```bash
-python annotate.py --pretrained-folder /path/to/pretrained/model/folder --emotion-config ./emotions_config/your-pick.json --domain twitter --input-filename /path/to/your/input --out ./emotion-annotations.jsonl --device cuda:0 --text-column text --id-column id
+python annotate.py --pretrained-folder /path/to/pretrained/model/folder \
+--emotion-config ./emotions_config/your-pick.json --domain twitter \
+--input-filename /path/to/your/input --out ./emotion-annotations.jsonl \
+--device cuda:0 --text-column text --id-column id
 ```
 
 You can use a `json`, `csv`, or `jsonl` as input. For reference about the format of the input files, check the [example_inputs](./example_inputs/). Note that if your `csv` or `jsonl` files use a different key for the text and the ID of each example, you can specify that with `text-column` and `id-column`. The output file is always a `jsonl` file. Use `--help` to see the rest of the arguments.

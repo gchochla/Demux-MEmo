@@ -377,7 +377,11 @@ def parse_args():
         help="json filename for emotion names and corresponding DEMUX classes",
     )
     parser.add_argument(
-        "--domain", type=str, default="twitter", help="source domain of data"
+        "--domain",
+        type=str,
+        default="twitter",
+        help="source domain of data",
+        choices=["twitter", "reddit", "facebook"],
     )
     parser.add_argument("--device", type=str, help="gpu/cpu to use")
     parser.add_argument(
@@ -385,6 +389,12 @@ def parse_args():
         type=str,
         nargs="+",
         help="which file(s) to load from",
+    )
+    parser.add_argument(
+        "--input-format",
+        type=str,
+        choices=["json", "jsonl", "csv"],
+        help="format of input file(s), if different from extension",
     )
     parser.add_argument(
         "--out-filename", required=True, type=str, help="where to save file"
@@ -414,7 +424,9 @@ def parse_args():
 def main():
     args = parse_args()
 
-    input_format = os.path.splitext(args.input_filename[0])[1][1:]
+    input_format = (
+        args.input_format or os.path.splitext(args.input_filename[0])[1][1:]
+    )
 
     device = (
         args.device
@@ -438,7 +450,7 @@ def main():
         if isinstance(emotion_config[emotion], str):
             emotion_config[emotion] = [emotion_config[emotion]]
 
-    messages = []
+    annotations = {}
     for fn in args.input_filename:
         print(f"Reading {fn}...", end=" ")
         with open(fn) as fp:
@@ -464,7 +476,7 @@ def main():
                     for _, message in messages.iterrows()
                 ]
 
-            print("Done reading, onwards to annotations...")
+            print("Done")
 
             if messages:
                 t0 = time()
@@ -476,20 +488,27 @@ def main():
                     batch_size=args.batch_size,
                     max_length=args.max_length,
                 )
-                annotations = to_dict(
-                    annotate(
-                        pipeline, data, device, args.id_column, args.text_column
+                annotations.update(
+                    to_dict(
+                        annotate(
+                            pipeline,
+                            data,
+                            device,
+                            args.id_column,
+                            args.text_column,
+                        )
                     )
                 )
                 print(f"Annotation time: {time()-t0:.3f} sec")
 
-                print(f"Saving to {args.out_filename}")
-                with open(args.out_filename, "w") as fp:
-                    for annotation in annotations:
-                        fp.write(json.dumps(annotation) + "\n")
-
             else:
                 print("No input found in file")
+
+    if annotations:
+        print(f"Saving to {args.out_filename}")
+        with open(args.out_filename, "w") as fp:
+            for annotation in annotations:
+                fp.write(json.dumps(annotation) + "\n")
 
 
 if __name__ == "__main__":

@@ -2,6 +2,32 @@
 
 This repo contains code and execution scripts for ICASSP '23 papers [Leveraging Label Correlations in a Multi-label Setting: A Case Study in Emotion](https://arxiv.org/abs/2210.15842) and [Using Emotion Embeddings to Transfer Knowledge Between Emotions, Languages, and Annotation Formats](https://arxiv.org/abs/2211.00171).
 
+## Annotate your documents with our pretrained models
+
+We have tested *this* functionality with `Python 3.10.13`, so be sure to create a suitable `Python virtual environment`. With your environment activated, install our dependencies:
+
+```bash
+pip install .
+```
+
+Then, *download* and unzip our pretrained models:
+
+| Type | Link |
+| --- | --- |  
+| [SemEval 2018 Task 1](https://aclanthology.org/S18-1001.pdf) | [model](https://drive.google.com/file/d/1Lksx2Yl0-U1Fx8jEl3Oq0k2tkNi4aXYb/view?usp=share_link) |
+| [GoEmotions](https://aclanthology.org/S18-1001.pdf) | [model](https://drive.google.com/file/d/1OMnLpBZv35Z_IE0YkGxSYRUy3gcllWEI/view?usp=share_link) |
+| [Paletz](https://link.springer.com/article/10.3758/s13428-023-02195-1) | [model](https://drive.google.com/file/d/1LPh-iEpdqhpO9TqoU-BCZHYiZ4c2ImTq/view?usp=share_link) |
+
+These folders contain the model parameters, brief model configuration files, and brief README of the sequence of training. You can use our existing emotion taxonomies in [emotion_configs](./emotion_configs/), or define your own likewise. It is highly recommended that you use one that is compatible with the model's latest training stage as delineated in its README file for the best results.
+
+Finally, to get the *predictions*, run the `annotate.py` script:
+
+```bash
+python annotate.py --pretrained-folder /path/to/pretrained/model/folder --emotion-config ./emotions_config/your-pick.json --domain twitter --input-filename /path/to/your/input --out ./emotion-annotations.jsonl --device cuda:0 --text-column text --id-column id
+```
+
+You can use a `json`, `csv`, or `jsonl` as input. For reference about the format of the input files, check the [example_inputs](./example_inputs/). Note that if your `csv` or `jsonl` files use a different key for the text and the ID of each example, you can specify that with `text-column` and `id-column`. The output file is always a `jsonl` file. Use `--help` to see the rest of the arguments.
+
 ## Leveraging Label Correlations in a Multi-label Setting: A Case Study in Emotion
 
 This repo contains code for `Demux` and `MEmo`, emotion recognition models using two different types of language prompts. We study how we can leverage relationships between emotions. We do so at two levels, using word associations and with additional losses.
